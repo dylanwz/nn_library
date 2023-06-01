@@ -1,17 +1,15 @@
 use std::vec::Vec;
 
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
+#[allow(dead_code)]
 pub struct NNetwork {
-    num_inputs: f32,
-    num_outputs: f32,
+    num_inputs: u32,
+    num_outputs: u32,
     num_hidden_layers: u32,
     connections: Vec<Vec<Connection>>,
     iovalues: Vec<Vec<f32>>,
 }
 
+#[allow(dead_code)]
 struct Connection {
     weight: f32,
     bias: f32,
@@ -21,14 +19,14 @@ impl NNetwork {
     /// Feed the input parameters forwards, through the network and its weights and biases
     ///     Inputs:     input size, output size, number of hidden layers
     ///     Outputs:    a neural network struct, with a 2D array of edges and biases
-    ///     Note:       
-    pub fn new(inputs: f32, outputs: f32, num_hidden_layers: u32) -> NNetwork {
+    ///     Note:       the connection values are initially random, and the i/o activations are 0
+    pub fn new(num_inputs: u32, num_outputs: u32, num_hidden_layers: u32) -> NNetwork {
+        let rng = rand::random::<f32>;
         return NNetwork {
-            num_inputs: inputs,
-            num_outputs: outputs,
+            num_inputs: num_inputs,
+            num_outputs: num_outputs,
             num_hidden_layers: num_hidden_layers,
-            // randomise this LOLLL!!
-            connections: vec![vec![Connection {weight: 0.0, bias: 0.0}]],
+            connections: vec![vec![Connection {weight: rng(), bias: rng()}]],
             iovalues: vec![vec![0.0]],
 
         };
@@ -81,8 +79,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn new_nn() {
+        let nn: NNetwork = NNetwork::new(724, 10, 1);
+        for row in &nn.connections {
+            for column in row {
+                print!("{}|{} ", column.weight, column.bias);
+            }
+            println!();
+        }
+        assert_eq!(1, 1);
     }
 }
