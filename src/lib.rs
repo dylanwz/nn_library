@@ -26,6 +26,7 @@ impl NNetwork {
             num_inputs: num_inputs,
             num_outputs: num_outputs,
             num_hidden_layers: num_hidden_layers,
+            // TO-DO: Figure out the architecture for the connections.
             connections: vec![vec![Connection {weight: rng(), bias: rng()}]],
             iovalues: vec![vec![0.0]],
 
