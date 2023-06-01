@@ -1,3 +1,5 @@
+use std::vec::Vec;
+
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
@@ -6,8 +8,8 @@ pub struct NNetwork {
     num_inputs: f32,
     num_outputs: f32,
     num_hidden_layers: u32,
-    connections: [Connection; 2],
-    iovalues: u32,
+    connections: Vec<Vec<Connection>>,
+    iovalues: Vec<Vec<f32>>,
 }
 
 struct Connection {
@@ -26,8 +28,8 @@ impl NNetwork {
             num_outputs: outputs,
             num_hidden_layers: num_hidden_layers,
             // randomise this LOLLL!!
-            connections: [Connection {weight: 0.0, bias: 0.0}, Connection {weight: 0.0, bias: 0.0}],
-            iovalues: 2
+            connections: vec![vec![Connection {weight: 0.0, bias: 0.0}]],
+            iovalues: vec![vec![0.0]],
 
         };
     }
