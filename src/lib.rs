@@ -1,12 +1,15 @@
 use std::vec::Vec;
+use ndarray::{Array, ArrayBase, OwnedRepr, Dim};
+use ndarray_rand::RandomExt;
+use rand::distributions::Uniform;
 
 #[allow(dead_code)]
 pub struct NNetwork {
-    num_inputs: u32,
-    num_outputs: u32,
-    num_hidden_layers: u32,
-    connections: Vec<Vec<Connection>>,
-    iovalues: Vec<Vec<f32>>,
+    pub num_inputs: u32,
+    pub num_outputs: u32,
+    pub num_hidden_layers: u32,
+    pub connections: Vec<ArrayBase<OwnedRepr<f64>, Dim<[usize; 2]>>>,
+    pub iovalues: Vec<Vec<f32>>,
 }
 
 #[allow(dead_code)]
@@ -15,22 +18,37 @@ struct Connection {
     bias: f32,
 }
 
+// Generates the number of neurons in the (singular) hidden layer for now
+fn get_hidden_neurons(ni: u32, no: u32, nhl: u32) -> Vec<u32> {
+    let mut v = vec![ni];
+    v.append(&mut vec![(ni + no)/2; nhl as usize]);
+    v.push(no);
+
+    return v;
+}
+
 impl NNetwork {
     /// Feed the input parameters forwards, through the network and its weights and biases
     ///     Inputs:     input size, output size, number of hidden layers
     ///     Outputs:    a neural network struct, with a 2D array of edges and biases
     ///     Note:       the connection values are initially random, and the i/o activations are 0
     pub fn new(num_inputs: u32, num_outputs: u32, num_hidden_layers: u32) -> NNetwork {
-        let rng = rand::random::<f32>;
-        return NNetwork {
+        let neuron_nums: Vec<u32> = get_hidden_neurons(num_inputs, num_outputs, num_hidden_layers);
+        let mut connection_array = Vec::new();
+        for i in 1..(num_hidden_layers + 1) {
+            connection_array.push(
+                Array::random((neuron_nums[i as usize] as usize, neuron_nums[(i-1) as usize] as usize), Uniform::new(0., 1.))
+            );
+        }
+
+        NNetwork {
             num_inputs: num_inputs,
             num_outputs: num_outputs,
-            num_hidden_layers: num_hidden_layers,
+            num_hidden_layers: num_hidden_layers, // for the time being, this will be 1
             // TO-DO: Figure out the architecture for the connections.
-            connections: vec![vec![Connection {weight: rng(), bias: rng()}]],
+            connections: connection_array,
             iovalues: vec![vec![0.0]],
-
-        };
+        }
     }
 
     /// Initialise the weights and biases of a NN
@@ -82,12 +100,7 @@ mod tests {
     #[test]
     fn new_nn() {
         let nn: NNetwork = NNetwork::new(724, 10, 1);
-        for row in &nn.connections {
-            for column in row {
-                print!("{}|{} ", column.weight, column.bias);
-            }
-            println!();
-        }
+        println!("{:?}", nn.connections);
         assert_eq!(1, 1);
     }
 }
