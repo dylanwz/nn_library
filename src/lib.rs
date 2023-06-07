@@ -1,15 +1,20 @@
-use std::vec::Vec;
-use ndarray::{Array, ArrayBase, OwnedRepr, Dim};
+use std::{vec::Vec};
+use ndarray::{Array, ArrayBase, OwnedRepr, ViewRepr, Dim, linalg::Dot};
 use ndarray_rand::RandomExt;
-use rand::distributions::Uniform;
+use rand::{distributions::Uniform, Rng};
+
+// fn print_type_of<T>(_: &T) {
+//     println!("{}", std::any::type_name::<T>())
+// }
 
 #[allow(dead_code)]
 pub struct NNetwork {
     pub num_inputs: u32,
     pub num_outputs: u32,
     pub num_hidden_layers: u32,
-    pub connections: Vec<ArrayBase<OwnedRepr<f64>, Dim<[usize; 2]>>>,
-    pub iovalues: Vec<Vec<f32>>,
+    pub weights: Vec<Array<f32, Dim<[usize; 2]>>>,
+    pub biases: Vec<Vec<f32>>,
+    pub ovalues: Vec<f32>,
 }
 
 #[allow(dead_code)]
@@ -28,43 +33,44 @@ fn get_hidden_neurons(ni: u32, no: u32, nhl: u32) -> Vec<u32> {
 }
 
 impl NNetwork {
-    /// Feed the input parameters forwards, through the network and its weights and biases
+    /// Initialises an instance of a neural network, using multilayer perceptron
     ///     Inputs:     input size, output size, number of hidden layers
     ///     Outputs:    a neural network struct, with a 2D array of edges and biases
     ///     Note:       the connection values are initially random, and the i/o activations are 0
-    pub fn new(num_inputs: u32, num_outputs: u32, num_hidden_layers: u32) -> NNetwork {
+    pub fn init(num_inputs: u32, num_outputs: u32, num_hidden_layers: u32) -> NNetwork {
+        let mut rng = rand::thread_rng();
+        
         let neuron_nums: Vec<u32> = get_hidden_neurons(num_inputs, num_outputs, num_hidden_layers);
         let mut connection_array = Vec::new();
-        for i in 1..(num_hidden_layers + 1) {
+        let mut bias_array: Vec<Vec<f32>> = Vec::new();
+        // for each hidden layer, randomise the weights from each neuron of the previous layer to each
+        // neuron of the current layer
+        for i in 1..=(num_hidden_layers + 1) {
             connection_array.push(
-                Array::random((neuron_nums[i as usize] as usize, neuron_nums[(i-1) as usize] as usize), Uniform::new(0., 1.))
+                Array::random((neuron_nums[i as usize] as usize, neuron_nums[(i-1) as usize] as usize), Uniform::new(-1., 1.))
             );
+            bias_array.push(Vec::new());
+            for _j in 1..=(neuron_nums[i as usize]) {
+                bias_array[(i-1) as usize].push(rng.gen_range(0.0..1.0));
+            }
         }
 
         NNetwork {
             num_inputs: num_inputs,
             num_outputs: num_outputs,
             num_hidden_layers: num_hidden_layers, // for the time being, this will be 1
-            // TO-DO: Figure out the architecture for the connections.
-            connections: connection_array,
-            iovalues: vec![vec![0.0]],
+            weights: connection_array,
+            biases: bias_array,
+            ovalues: vec![0.0; num_outputs as usize],
         }
     }
 
-    /// Initialise the weights and biases of a NN
-    ///     Inputs:     instance of NN
-    ///     Outputs:    none... updates 'connections' field of a given NN
-    ///     Note:       
-    pub fn init_params(&self) -> [u32; 2] {
-        return [1, 2];
-    }
-
     /// Feed the input parameters forwards, through the network and its weights and biases
-    ///     Inputs:     instance of NN
-    ///     Outputs:    none... updates the 'output' field of the 'iovalues' field of a given NN
+    ///     Inputs:     instance of NN, input vector
+    ///     Outputs:    none... updates the 'output' field of the 'ovalues' field of a given NN
     ///     Note:       
-    pub fn feed_forward(&self) -> () {
-        return;
+    pub fn feed_forward(nn: NNetwork, i: Vec<f32>) -> () {
+        let v: ArrayBase<OwnedRepr<f32>, Dim<[usize; 1]>> = Array::from_vec(i);
     }
 
     /// Computes the cost of the sample
@@ -99,8 +105,15 @@ mod tests {
 
     #[test]
     fn new_nn() {
-        let nn: NNetwork = NNetwork::new(724, 10, 1);
-        println!("{:?}", nn.connections);
+        let nn: NNetwork = NNetwork::init(4, 4, 1);
+        println!("Weights: {:?}", nn.weights);
+        println!("Biases: {:?}", nn.biases);
         assert_eq!(1, 1);
+    }
+
+    #[test]
+    fn feed_forward() {
+        let nn: NNetwork = NNetwork::init(4, 4, 1);
+        NNetwork::feed_forward(nn, vec![0.0, 1.0, 0.0, 0.0]);
     }
 }
