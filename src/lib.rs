@@ -2,6 +2,7 @@ use std::{vec::Vec};
 use ndarray::{Array, ArrayBase, OwnedRepr, Dim};
 use ndarray_rand::RandomExt;
 use rand::{distributions::Uniform, Rng};
+use std::f32::consts::E;
 
 // fn print_type_of<T>(_: &T) {
 //     println!("{}", std::any::type_name::<T>())
@@ -66,22 +67,36 @@ impl NNetwork {
     ///     Outputs:    none... updates the 'output' field of the 'ovalues' field of a given NN
     ///     Note:       
     pub fn feed_forward(nn: &mut NNetwork, i: Vec<f32>) -> () {
-        let mut v: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>> = Array::from_vec(i).into_shape((nn.num_inputs as usize,1)).unwrap();
+        let mut v: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>> = Array::from_vec(i)
+            .into_shape((nn.num_inputs as usize,1))
+            .unwrap();
+
         for i in 0..=nn.num_hidden_layers {
             let m = &nn.weights[i as usize];
-            v = m.dot(&v) + Array::from_vec(nn.biases[i as usize].clone()).into_shape((nn.biases[i as usize].len() as usize, 1)).unwrap();
+            v = (m.dot(&v) + Array::from_vec(nn.biases[i as usize].clone())
+            .into_shape((nn.biases[i as usize].len() as usize, 1))
+            .unwrap())
+            .mapv_into(|x| if x > 0.0 { 1.0/(1.0+(E.powf(-x))) } else { 0.0 });
         };
+        
         for o in 0..nn.num_outputs {
             nn.ovalues[o as usize] = v[[o as usize, 0 as usize]];
-        }
+        };
     }
 
     /// Computes the cost of the sample
     ///     Inputs:     instance of a training sample, instance of a NN
     ///     Outputs:    float (cost)
     ///     Note:       uses a cost function: (x - y)^2
-    pub fn get_cost(&self) -> () {
-        return;
+    pub fn get_cost(nn: NNetwork, v: Vec<f32>) -> Vec<f32> {
+        fn cost_fn(a: f32, b: f32) -> f32 {
+            return (a-b).powi(2);
+        }
+        let mut costs = Vec::new();
+        for e in 0..nn.num_outputs {
+            costs.push(cost_fn(nn.ovalues[e as usize], v[e as usize]));
+        }
+        return costs;
     }
 
     /// Propagates the cost function backwards to compute the value of the descent gradient
@@ -116,7 +131,7 @@ mod tests {
 
     #[test]
     fn feed_forward() {
-        let mut nn: NNetwork = NNetwork::init(4, 6, 1);
+        let mut nn: NNetwork = NNetwork::init(4, 6, 2);
         NNetwork::feed_forward(&mut nn, vec![0.0, 1.0, 0.0, 0.0]);
         println!("{:?}", nn.ovalues);
     }
