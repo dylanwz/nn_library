@@ -17,12 +17,6 @@ pub struct NNetwork {
     pub ovalues: Vec<f32>,
 }
 
-#[allow(dead_code)]
-struct Connection {
-    weight: f32,
-    bias: f32,
-}
-
 // Generates the number of neurons in the (singular) hidden layer for now
 fn get_hidden_neurons(ni: u32, no: u32, nhl: u32) -> Vec<u32> {
     let mut v = vec![ni];
@@ -72,14 +66,14 @@ impl NNetwork {
     ///     Outputs:    none... updates the 'output' field of the 'ovalues' field of a given NN
     ///     Note:       
     pub fn feed_forward(nn: &mut NNetwork, i: Vec<f32>) -> () {
-        let mut v: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>> = Array::from_vec(i).into_shape((4,1)).unwrap();
+        let mut v: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>> = Array::from_vec(i).into_shape((nn.num_inputs as usize,1)).unwrap();
         for i in 0..=nn.num_hidden_layers {
             let m = &nn.weights[i as usize];
-            // println!("Matrix: {:?}, {:?}", m, m.shape());
-            // println!("Vector: {:?}, {:?}", v, v.shape());
-            v = m.dot(&v);
+            v = m.dot(&v) + Array::from_vec(nn.biases[i as usize].clone()).into_shape((nn.biases[i as usize].len() as usize, 1)).unwrap();
         };
-        println!("final result: {:?}", v);
+        for o in 0..nn.num_outputs {
+            nn.ovalues[o as usize] = v[[o as usize, 0 as usize]];
+        }
     }
 
     /// Computes the cost of the sample
