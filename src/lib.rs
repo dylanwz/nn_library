@@ -13,6 +13,7 @@ pub struct NNetwork {
     pub num_inputs: u32,
     pub num_outputs: u32,
     pub num_hidden_layers: u32,
+    pub num_neurons: Vec<u32>,
     pub weights: Vec<Array<f32, Dim<[usize; 2]>>>,
     pub biases: Vec<Vec<f32>>,
     pub ovalues: Vec<f32>,
@@ -27,8 +28,13 @@ fn get_hidden_neurons(ni: u32, no: u32, nhl: u32) -> Vec<u32> {
     return v;
 }
 
+pub struct TrainingFeedback {
+    pub weights: Vec<Array<f32, Dim<[usize; 2]>>>,
+    pub biases: Vec<Vec<f32>>,
+}
+
 impl NNetwork {
-    /// Initialises an instance of a neural network, using multilayer perceptron
+    /// 1. Initialises an instance of a neural network, using multilayer perceptron
     ///     Inputs:     input size, output size, number of hidden layers
     ///     Outputs:    a neural network struct, with a 2D array of edges and biases
     ///     Note:       the connection values are initially random, and the i/o activations are 0
@@ -56,13 +62,14 @@ impl NNetwork {
             num_inputs: num_inputs,
             num_outputs: num_outputs,
             num_hidden_layers: num_hidden_layers, // for the time being, this will be 1
+            num_neurons: neuron_nums,
             weights: connection_array,
             biases: bias_array,
             ovalues: vec![0.0; num_outputs as usize],
         }
     }
 
-    /// Feed the input parameters forwards, through the network and its weights and biases
+    /// 2. Feed the input parameters forwards, through the network and its weights and biases
     ///     Inputs:     instance of NN, input vector
     ///     Outputs:    none... updates the 'output' field of the 'ovalues' field of a given NN
     ///     Note:       
@@ -83,31 +90,45 @@ impl NNetwork {
             nn.ovalues[o as usize] = v[[o as usize, 0 as usize]];
         };
     }
-
-    /// Computes the cost of the sample
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+    /// 3a. Computes the cost of the sample
     ///     Inputs:     instance of a training sample, instance of a NN
     ///     Outputs:    float (cost)
     ///     Note:       uses a cost function: (x - y)^2
-    pub fn get_cost(nn: NNetwork, v: Vec<f32>) -> Vec<f32> {
+    pub fn get_cost(nn: &NNetwork, v: &Vec<f32>) -> f32 {
         fn cost_fn(a: f32, b: f32) -> f32 {
-            return (a-b).powi(2);
+            return (a-b).powi(2); // (x-y)^2
         }
-        let mut costs = Vec::new();
+        let mut cost = 0.0;
         for e in 0..nn.num_outputs {
-            costs.push(cost_fn(nn.ovalues[e as usize], v[e as usize]));
+            cost += cost_fn(nn.ovalues[e as usize], v[e as usize]);
         }
-        return costs;
+        return cost;
     }
 
-    /// Propagates the cost function backwards to compute the value of the descent gradient
+    /// 3b. Propagates the cost function backwards to compute the value of the descent gradient
     ///     Inputs:     instance of a NN, cost
     ///     Outputs:    descent gradient
     ///     Note:       
-    pub fn backprop(&self) -> () {
-        return;
+    pub fn backprop(&self, expected_vals: &Vec<f32>) -> TrainingFeedback {
+        let c = NNetwork::get_cost(self, &expected_vals);
+        let feedback = TrainingFeedback {
+            weights: Vec::new(),
+            biases: Vec::new(),
+        };
+        for layer in (self.num_hidden_layers)..0 { // start with the output layer
+            for j in 0..(self.num_neurons[layer as usize]) { // let j be the destination neuron for a weight
+                
+                for i in (self.num_neurons[(layer - 1) as usize])..=0 {
+
+                }
+            }
+        }
+         
+        return feedback;
     }
 
-    /// Updates the parameters based on the descent gradient
+    /// 4. Updates the parameters based on the descent gradient
     ///     Inputs:     instance of a NN, descent gradient, learning rate
     ///     Outputs:    none... updates the 'connections' field of a given NN
     ///     Note:       
@@ -134,5 +155,12 @@ mod tests {
         let mut nn: NNetwork = NNetwork::init(4, 6, 2);
         NNetwork::feed_forward(&mut nn, vec![0.0, 1.0, 0.0, 0.0]);
         println!("{:?}", nn.ovalues);
+    }
+
+    #[test]
+    fn backprop() {
+        let mut nn: NNetwork = NNetwork::init(4, 6, 2);
+        NNetwork::feed_forward(&mut nn, vec![0.0, 0.0, 1.0, 1.0]);
+        // NNetwork::backprop(&nn, &vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
     }
 }
