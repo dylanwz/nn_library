@@ -101,53 +101,61 @@ impl NNetwork {
         };
     }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
-    // /// 3a. Computes the cost of the sample
-    // ///     Inputs:     instance of a training sample, instance of a NN
-    // ///     Outputs:    float (cost)
-    // ///     Note:       uses a cost function: (x - y)^2
-    // pub fn get_cost(&self, v: &Vec<f32>) -> f32 {
-    //     fn cost_fn(a: f32, b: f32) -> f32 {
-    //         return (a-b).powi(2); // (x-y)^2
-    //     }
-    //     let mut cost = 0.0;
-    //     for e in 0..self.num_outputs {
-    //         cost += cost_fn(self.activations[(self.num_hidden_layers + 1) as usize][e as usize], v[e as usize]);
-    //     }
-    //     return cost;
-    // }
-
-    // pub fn calc_partial_w(&self, cost: f32, layer: u32, src: u32, dest: u32) -> f32 {
-    //     let mut res = 2.0*cost.powi(2); // ∂C/∂W(ji) = ∂C/∂a0 ...
-    //     for d in 0..=(layer) {
-    //         res *= self.weights[d as usize][[,]]
-    //     }
-    //     return 0.0;
-    // }
-
-    // pub fn calc_partial_b(&self, depth: u32, src: u32, dest: u32) -> f32 {
-    //     return 0.0;
-    // }
-    // /// 3b. Propagates the cost function backwards to compute the value of the descent gradient
-    // ///     Inputs:     instance of a NN, cost
-    // ///     Outputs:    descent gradient
-    // ///     Note:       
-    // pub fn backprop(&self, expected_vals: &Vec<f32>) -> TrainingFeedback {
-    //     let c = NNetwork::get_cost(self, &expected_vals);
-    //     let feedback = TrainingFeedback {
-    //         weights: Vec::new(),
-    //         biases: Vec::new(),
-    //     };
-    //     for layer in (self.num_hidden_layers)..0 { // start with the output layer
-    //         for j in 0..(self.num_neurons[layer as usize]) { // let j be the destination neuron for a weight
+    /// 3a. Computes the cost of the sample
+    ///     Inputs:     instance of a training sample, instance of a NN
+    ///     Outputs:    float (cost)
+    ///     Note:       uses a cost function: (x - y)^2
+    pub fn get_cost(&self, v: &Vec<f32>) -> f32 {
+        fn cost_fn(a: f32, b: f32) -> f32 {
+            return (a-b).powi(2); // (x-y)^2
+        }
+        let mut cost = 0.0;
+        for e in 0..self.num_outputs {
+            cost += cost_fn(self.activations[(self.num_hidden_layers + 1) as usize][e as usize], v[e as usize]);
+        }
+        return cost;
+    }
+    // Weight layer = 0-indexed indice of weight's endpoint
+    pub fn calc_partial_w(&self, cost: f32, weight_layer: u32, weight_src: u32, weight_dest: u32) -> f32 {
+        let mut res = 0;
+        for d in (self.num_hidden_layers+1)..=(weight_layer) { // chain of derivatves
+            let mut res_t = 2.0*cost.powi(2); // starting unit: ∂C/∂W(ji) = ∂C/∂a0 * 
+            for endp in 0..(self.num_neurons[(self.num_hidden_layers + 1 - d) as usize]) { 
+                let acti = self.activations[d as usize][endp as usize];
+                res_t *= (E.powf(-1.0*acti))/(1.0+E.powf(-1.0*acti));
+                res_t *= (E.powf(-1.0*acti))/(1.0+E.powf(-1.0*acti));
                 
-    //             for i in (self.num_neurons[(layer - 1) as usize])..=0 {
+                // ending unit pt I: ∂C/∂W(ji) = ∂C/∂a0 *
+            }
+            res *= self.weights[d as usize][[,]] // ending unit pt II: ∂a(n)/∂zn * ∂zn/∂wn
+        }
+        return 0.0;
+    }
 
-    //             }
-    //         }
-    //     }
+    pub fn calc_partial_b(&self, depth: u32, src: u32, dest: u32) -> f32 {
+        return 0.0;
+    }
+    /// 3b. Propagates the cost function backwards to compute the value of the descent gradient
+    ///     Inputs:     instance of a NN, cost
+    ///     Outputs:    descent gradient
+    ///     Note:       
+    pub fn backprop(&self, expected_vals: &Vec<f32>) -> TrainingFeedback {
+        let c = NNetwork::get_cost(self, &expected_vals);
+        let feedback = TrainingFeedback {
+            weights: self.weights.clone(),
+            biases: self.biases.clone(),
+        };
+        for layer in (self.num_hidden_layers)..0 { // start with the output layer
+            for j in 0..(self.num_neurons[layer as usize]) { // let j be the destination neuron for a weight
+                
+                for i in (self.num_neurons[(layer - 1) as usize])..=0 {
+
+                }
+            }
+        }
          
-    //     return feedback;
-    // }
+        return feedback;
+    }
 
     /// 4. Updates the parameters based on the descent gradient
     ///     Inputs:     instance of a NN, descent gradient, learning rate
