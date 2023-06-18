@@ -116,18 +116,22 @@ impl NNetwork {
         return cost;
     }
     // Weight layer = 0-indexed indice of weight's endpoint
+    // The idea: ∂C/∂W(n)(ji) = ∂C/∂a0 * ∂a0/∂z0 * ∂a1/∂z1 * ... * ∂a(n-1)/∂z(n-1) * ∂z(n-1)/∂zn * ∂zn/∂W(n)(ji)
     pub fn calc_partial_w(&self, cost: f32, weight_layer: u32, weight_src: u32, weight_dest: u32) -> f32 {
+        let mut visited_arr = Vec::new();
+        for layer in &self.activations[((self.num_hidden_layers + 1) as usize)..((weight_layer) as usize)] {
+            let t: Vec<bool> = vec![false; layer.len()];
+            visited_arr.push(t);
+        }
+        let mut s: Vec<f32> = Vec::new();
         let mut res = 0;
-        for d in (self.num_hidden_layers+1)..=(weight_layer) { // chain of derivatves
-            let mut res_t = 2.0*cost.powi(2); // starting unit: ∂C/∂W(ji) = ∂C/∂a0 * 
-            for endp in 0..(self.num_neurons[(self.num_hidden_layers + 1 - d) as usize]) { 
-                let acti = self.activations[d as usize][endp as usize];
-                res_t *= (E.powf(-1.0*acti))/(1.0+E.powf(-1.0*acti));
-                res_t *= (E.powf(-1.0*acti))/(1.0+E.powf(-1.0*acti));
+        for outp in 0..self.num_outputs {
+            s.push(self.activations[(self.num_hidden_layers + 1) as usize][outp as usize]);
+            let curr = s.pop();
+            // operate on curr
+            for depth in (self.num_hidden_layers + 1)..weight_layer {
                 
-                // ending unit pt I: ∂C/∂W(ji) = ∂C/∂a0 *
             }
-            res *= self.weights[d as usize][[,]] // ending unit pt II: ∂a(n)/∂zn * ∂zn/∂wn
         }
         return 0.0;
     }
