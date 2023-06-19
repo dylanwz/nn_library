@@ -63,7 +63,7 @@ impl NNetwork {
             }
         }
         activation_array[(num_hidden_layers + 1) as usize] = vec![0.0; num_outputs as usize];
-        let partial_array = activation_array.clone();
+        let partial_array = bias_array.clone();
 
         NNetwork {
             num_inputs: num_inputs,
@@ -118,45 +118,31 @@ impl NNetwork {
         }
         return cost;
     }
-    // Weight layer = 0-indexed indice of weight's endpoint
-    // The idea: ∂C/∂W(n)(ji) = ∂C/∂a0 * ∂a0/∂z0 * ∂a1/∂z1 * ... * ∂a(n-1)/∂z(n-1) * ∂z(n-1)/∂zn * ∂zn/∂W(n)(ji)
-    pub fn calc_partial_w(&self, cost: f64, weight_layer: u32, weight_src: u32, weight_dest: u32) -> () {
-        
-        return 0.0;
-    }
 
-    pub fn calc_partial_b(&self, depth: u32, src: u32, dest: u32) -> f64 {
-        return 0.0;
-    }
     /// 3b. Propagates the cost function backwards to compute the value of the descent gradient
     ///     Inputs:     instance of a NN, cost
-    ///     Outputs:    descent gradient
-    ///     Note:       
-    pub fn backprop(&mut self, expected_vals: &Vec<f64>) -> TrainingFeedback {
+    ///     Outputs:    none; alters partial field of NN. stochastic gradient
+    ///     Note:       the idea: ∂C/∂W(n)(ji) = ∂C/∂a0 * [∂a0/∂z0 * ∂z0/∂a1] * ... * [∂a(n-1)/∂z(n-1) * ∂z(n-1)/∂zn] * ∂zn/∂W(n)(ji)
+    pub fn backprop(&mut self, expected_vals: &Vec<f64>) -> () {
         let c = NNetwork::get_cost(self, &expected_vals);
-        let feedback = TrainingFeedback {
-            weights: self.weights.clone(),
-            biases: self.biases.clone(),
-        };
         
         let mut sum: f64;
-        for layer in (self.weights.len() - 1)..=0 {
-            if layer == self.weights.len() - 1 { // ∂C/∂W(n)(ji) = ∂C/∂a0 * ...
-                for outp in 0..self.num_outputs {
-                    self.partials[layer as usize][outp as usize] = 2.0*(self.activations[layer as usize][outp as usize] - expected_vals[outp as usize]);
+        for layer in (self.weights.len() - 1)..=0 { // go layer by layer --- (!!) each layer is a 'unit' (!!)
+            if layer == self.weights.len() - 1 { // initial partial derivative: ∂C/∂W(n)(ji) = ∂C/∂a0 = 2(x-y)
+                for outp in 0..self.activations[layer].len() {
+                    self.partials[layer][outp] = 2.0*(self.activations[layer][outp] - c);
                 }
             } else {
-                for curr in 0..self.partials[layer].len() {
-                    sum = 0.0;
-                    for pre in 0..self.partials[layer + 1].len() {
-                        sum += 
+                for curr in 0..self.partials[layer].len() { // summing each path of influence (!!) leading up to this neuron (!!)
+                    sum = 0.0; // use the distributive law of addition and multiplication... weight changes, but ∂a(n)/∂z(n) is the same for all paths
+                    for prev in 0..self.partials[layer + 1].len() {
+                        sum += self.partials[layer + 1][prev] * self.weights[layer][[curr,prev]]; // ∂z(n-1)/∂a(n) = W(n)
                     }
+                    self.partials[layer][curr] = sum *
+                    ((E.powf(-1.0 * self.activations[layer][curr]))/(1.0 + E.powf(-1.0 * self.activations[layer][curr]))); // ∂a(n)/∂z(n)
                 }
             }
-            }
         }
-         
-        return feedback;
     }
 
     /// 4. Updates the parameters based on the descent gradient
@@ -193,6 +179,8 @@ mod tests {
     fn backprop() {
         let mut nn: NNetwork = NNetwork::init(4, 6, 2);
         NNetwork::feed_forward(&mut nn, vec![0.0, 0.0, 1.0, 1.0]);
-        // NNetwork::backprop(&nn, &vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
+        println!("State: {:?}... {:?}", nn.activations, nn.weights);
+        NNetwork::backprop(&mut nn, &vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
+        println!("Partials: {:?}", nn.partials);
     }
 }
