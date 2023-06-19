@@ -2,7 +2,7 @@ use std::{vec::Vec};
 use ndarray::{Array, ArrayBase, OwnedRepr, Dim};
 use ndarray_rand::RandomExt;
 use rand::{distributions::Uniform, Rng};
-use std::f32::consts::E;
+use std::f64::consts::E;
 
 // fn print_type_of<T>(_: &T) {
 //     println!("{}", std::any::type_name::<T>())
@@ -14,9 +14,10 @@ pub struct NNetwork {
     pub num_outputs: u32,
     pub num_hidden_layers: u32,
     pub num_neurons: Vec<u32>,
-    pub weights: Vec<Array<f32, Dim<[usize; 2]>>>,
-    pub biases: Vec<Vec<f32>>,
-    pub activations: Vec<Vec<f32>>,
+    pub weights: Vec<Array<f64, Dim<[usize; 2]>>>,
+    pub biases: Vec<Vec<f64>>,
+    pub activations: Vec<Vec<f64>>,
+    pub partials: Vec<Vec<f64>>,
 }
 
 // Generates the number of neurons in the (for now, singular) hidden layer
@@ -29,8 +30,8 @@ fn get_hidden_neurons(ni: u32, no: u32, nhl: u32) -> Vec<u32> {
 }
 
 pub struct TrainingFeedback {
-    pub weights: Vec<Array<f32, Dim<[usize; 2]>>>,
-    pub biases: Vec<Vec<f32>>,
+    pub weights: Vec<Array<f64, Dim<[usize; 2]>>>,
+    pub biases: Vec<Vec<f64>>,
 }
 
 impl NNetwork {
@@ -45,8 +46,8 @@ impl NNetwork {
         
         let neuron_nums: Vec<u32> = get_hidden_neurons(num_inputs, num_outputs, num_hidden_layers);
         let mut connection_array = Vec::new();
-        let mut bias_array: Vec<Vec<f32>> = Vec::new();
-        let mut activation_array: Vec<Vec<f32>> = Vec::new();
+        let mut bias_array: Vec<Vec<f64>> = Vec::new();
+        let mut activation_array: Vec<Vec<f64>> = Vec::new();
         // for each hidden layer, randomise the weights from each neuron of the previous layer to each
         // neuron of the current layer
         activation_array.push(Vec::new());
@@ -62,6 +63,7 @@ impl NNetwork {
             }
         }
         activation_array[(num_hidden_layers + 1) as usize] = vec![0.0; num_outputs as usize];
+        let partial_array = activation_array.clone();
 
         NNetwork {
             num_inputs: num_inputs,
@@ -71,6 +73,7 @@ impl NNetwork {
             weights: connection_array,
             biases: bias_array,
             activations: activation_array,
+            partials: partial_array,
         }
     }
 
@@ -78,8 +81,8 @@ impl NNetwork {
     ///     Inputs:     instance of NN, input vector
     ///     Outputs:    none... updates the 'output' field of the 'ovalues' field of a given NN
     ///     Note:       
-    pub fn feed_forward(&mut self, i: Vec<f32>) -> () {
-        let mut v: ArrayBase<OwnedRepr<f32>, Dim<[usize; 2]>> = Array::from_vec(i)
+    pub fn feed_forward(&mut self, i: Vec<f64>) -> () {
+        let mut v: ArrayBase<OwnedRepr<f64>, Dim<[usize; 2]>> = Array::from_vec(i)
             .into_shape((self.num_inputs as usize,1))
             .unwrap();
 
@@ -105,8 +108,8 @@ impl NNetwork {
     ///     Inputs:     instance of a training sample, instance of a NN
     ///     Outputs:    float (cost)
     ///     Note:       uses a cost function: (x - y)^2
-    pub fn get_cost(&self, v: &Vec<f32>) -> f32 {
-        fn cost_fn(a: f32, b: f32) -> f32 {
+    pub fn get_cost(&self, v: &Vec<f64>) -> f64 {
+        fn cost_fn(a: f64, b: f64) -> f64 {
             return (a-b).powi(2); // (x-y)^2
         }
         let mut cost = 0.0;
@@ -117,44 +120,39 @@ impl NNetwork {
     }
     // Weight layer = 0-indexed indice of weight's endpoint
     // The idea: ∂C/∂W(n)(ji) = ∂C/∂a0 * ∂a0/∂z0 * ∂a1/∂z1 * ... * ∂a(n-1)/∂z(n-1) * ∂z(n-1)/∂zn * ∂zn/∂W(n)(ji)
-    pub fn calc_partial_w(&self, cost: f32, weight_layer: u32, weight_src: u32, weight_dest: u32) -> f32 {
-        let mut visited_arr = Vec::new();
-        for layer in &self.activations[((self.num_hidden_layers + 1) as usize)..((weight_layer) as usize)] {
-            let t: Vec<bool> = vec![false; layer.len()];
-            visited_arr.push(t);
-        }
-        let mut s: Vec<f32> = Vec::new();
-        let mut res = 0;
-        for outp in 0..self.num_outputs {
-            s.push(self.activations[(self.num_hidden_layers + 1) as usize][outp as usize]);
-            let curr = s.pop();
-            // operate on curr
-            for depth in (self.num_hidden_layers + 1)..weight_layer {
-                
-            }
-        }
+    pub fn calc_partial_w(&self, cost: f64, weight_layer: u32, weight_src: u32, weight_dest: u32) -> () {
+        
         return 0.0;
     }
 
-    pub fn calc_partial_b(&self, depth: u32, src: u32, dest: u32) -> f32 {
+    pub fn calc_partial_b(&self, depth: u32, src: u32, dest: u32) -> f64 {
         return 0.0;
     }
     /// 3b. Propagates the cost function backwards to compute the value of the descent gradient
     ///     Inputs:     instance of a NN, cost
     ///     Outputs:    descent gradient
     ///     Note:       
-    pub fn backprop(&self, expected_vals: &Vec<f32>) -> TrainingFeedback {
+    pub fn backprop(&mut self, expected_vals: &Vec<f64>) -> TrainingFeedback {
         let c = NNetwork::get_cost(self, &expected_vals);
         let feedback = TrainingFeedback {
             weights: self.weights.clone(),
             biases: self.biases.clone(),
         };
-        for layer in (self.num_hidden_layers)..0 { // start with the output layer
-            for j in 0..(self.num_neurons[layer as usize]) { // let j be the destination neuron for a weight
-                
-                for i in (self.num_neurons[(layer - 1) as usize])..=0 {
-
+        
+        let mut sum: f64;
+        for layer in (self.weights.len() - 1)..=0 {
+            if layer == self.weights.len() - 1 { // ∂C/∂W(n)(ji) = ∂C/∂a0 * ...
+                for outp in 0..self.num_outputs {
+                    self.partials[layer as usize][outp as usize] = 2.0*(self.activations[layer as usize][outp as usize] - expected_vals[outp as usize]);
                 }
+            } else {
+                for curr in 0..self.partials[layer].len() {
+                    sum = 0.0;
+                    for pre in 0..self.partials[layer + 1].len() {
+                        sum += 
+                    }
+                }
+            }
             }
         }
          
