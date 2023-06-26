@@ -50,20 +50,20 @@ impl NNetwork {
         let mut activation_array: Vec<Vec<f64>> = Vec::new();
         // for each hidden layer, randomise the weights from each neuron of the previous layer to each
         // neuron of the current layer
-        activation_array.push(Vec::new());
+        activation_array.push(vec![0.0; num_inputs as usize]);
         for i in 1..=(num_hidden_layers + 1) {
             connection_array.push(
                 Array::random((neuron_nums[i as usize] as usize, neuron_nums[(i-1) as usize] as usize), Uniform::new(-1., 1.))
             );
             bias_array.push(Vec::new());
             activation_array.push(Vec::new());
-            for _j in 1..=(neuron_nums[i as usize]) {
+            for _ in 1..=(neuron_nums[i as usize]) {
                 bias_array[(i-1) as usize].push(rng.gen_range(0.0..1.0));
-                activation_array[(i-1) as usize].push(0.0);
+                activation_array[i as usize].push(0.0);
             }
         }
         activation_array[(num_hidden_layers + 1) as usize] = vec![0.0; num_outputs as usize];
-        let partial_array = bias_array.clone();
+        let partial_array = activation_array.clone();
 
         NNetwork {
             num_inputs: num_inputs,
@@ -85,7 +85,6 @@ impl NNetwork {
         let mut v: ArrayBase<OwnedRepr<f64>, Dim<[usize; 2]>> = Array::from_vec(i)
             .into_shape((self.num_inputs as usize,1))
             .unwrap();
-
 
         for n in 0..v.dim().0 {
             self.activations[0][n] = v[[n as usize, 0 as usize]];
@@ -127,8 +126,8 @@ impl NNetwork {
         let c = NNetwork::get_cost(self, &expected_vals);
         
         let mut sum: f64;
-        for layer in (self.weights.len() - 1)..=0 { // go layer by layer --- (!!) each layer is a 'unit' (!!)
-            if layer == self.weights.len() - 1 { // initial partial derivative: ∂C/∂W(n)(ji) = ∂C/∂a0 = 2(x-y)
+        for layer in (0..self.partials.len()).rev() { // go layer by layer --- (!!) each layer is a 'unit' (!!)
+            if layer == (self.partials.len() - 1) { // initial partial derivative: ∂C/∂W(n)(ji) = ∂C/∂a0 = 2(x-y)
                 for outp in 0..self.activations[layer].len() {
                     self.partials[layer][outp] = 2.0*(self.activations[layer][outp] - c);
                 }
@@ -136,7 +135,7 @@ impl NNetwork {
                 for curr in 0..self.partials[layer].len() { // summing each path of influence (!!) leading up to this neuron (!!)
                     sum = 0.0; // use the distributive law of addition and multiplication... weight changes, but ∂a(n)/∂z(n) is the same for all paths
                     for prev in 0..self.partials[layer + 1].len() {
-                        sum += self.partials[layer + 1][prev] * self.weights[layer][[curr,prev]]; // ∂z(n-1)/∂a(n) = W(n)
+                        sum += self.partials[layer + 1][prev] * self.weights[layer][[prev,curr]]; // ∂z(n-1)/∂a(n) = W(n), where z is the endpoint of W
                     }
                     self.partials[layer][curr] = sum *
                     ((E.powf(-1.0 * self.activations[layer][curr]))/(1.0 + E.powf(-1.0 * self.activations[layer][curr]))); // ∂a(n)/∂z(n)
@@ -149,7 +148,14 @@ impl NNetwork {
     ///     Inputs:     instance of a NN, descent gradient, learning rate
     ///     Outputs:    none... updates the 'connections' field of a given NN
     ///     Note:       
-    pub fn update_params(&self) -> () {
+    pub fn update_params(&mut self, learning_rate: f64) -> () {
+        for layer in (1..self.partials.len()).rev() {
+            for curr in 0..(self.partials[layer].len()) {
+                for prev in 0..(self.activations[layer - 1].len()) {
+                    self.weights[layer - 1][[curr, prev]] += learning_rate * self.partials[layer][curr] * self.activations[layer - 1][prev];
+                }
+            }
+        }
         return;
     }
 
@@ -161,11 +167,11 @@ mod tests {
 
     #[test]
     fn new_nn() {
-        let nn: NNetwork = NNetwork::init(4, 6, 1);
+        let nn: NNetwork = NNetwork::init(4, 6, 2);
         println!("Weights: {:?}", nn.weights);
         println!("Biases: {:?}", nn.biases);
         println!("Activations: {:?}", nn.activations);
-        assert_eq!(1, 1);
+        println!("Partials: {:?}", nn.partials);
     }
 
     #[test]
@@ -182,5 +188,8 @@ mod tests {
         println!("State: {:?}... {:?}", nn.activations, nn.weights);
         NNetwork::backprop(&mut nn, &vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0]);
         println!("Partials: {:?}", nn.partials);
+        println!("Old Weights: {:?}", nn.weights);
+        NNetwork::update_params(&mut nn, 1.0);
+        println!("Updated Weights: {:?}", nn.weights);
     }
 }
