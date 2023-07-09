@@ -259,7 +259,7 @@ mod tests {
         let epoch = Result::unwrap(NNetwork::csv_to_training("./mnist_train.csv"));
         let mut c = 1;
         for ex in epoch {
-            if c == 1000 {
+            if c == 10000 {
                 continue;
             }
             let mut desired_output: Vec<f64> = vec![0.0; 10];
