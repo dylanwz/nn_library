@@ -37,3 +37,7 @@
 
 # Tests
 *_exp.rs
+
+#csv files
+mnist_test.csv
+mnist_train.csv
