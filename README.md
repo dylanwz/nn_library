@@ -1,4 +1,4 @@
-Hello World! A Brief README
+A Brief README
 
 The project is a very simplistic multilayer perceptron neural network. I wrote
 it for education purposes, because it has the key foundations for how a neural
@@ -19,6 +19,6 @@ Finally, this is very slow and insecure (everything is public and debug-able),
 but the aim is to explore the key mechanisms that underpin neural networks. As
 such, there is a greater emphasis on that, rather than speed and efficiency.
 
-Highest accuracy: 75.5%.
+Highest accuracy: 90.0%.
 
 (Last one is kind of cope lol).
